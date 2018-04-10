@@ -10,6 +10,8 @@ SUMMARY="Cygwin package installer"
 #DESCRIPTION=
 HOMEPAGE="https://cygwin.com/"
 
+PATCH_URI="https://cygwin.com/git/gitweb.cgi?p=cygwin-apps/setup.git;a=patch;h=da93010#/setup-2.891-lws2_32.patch"
+
 RESTRICT="debuginfo strip"
 
 src_compile() {
