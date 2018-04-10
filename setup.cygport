@@ -1,0 +1,48 @@
+GIT_URI="git://sourceware.org/git/cygwin-apps/setup.git"
+GIT_TAG="release_${PV}"
+inherit git
+
+NAME="setup"
+VERSION=2.891
+RELEASE=0.1
+CATEGORY="Base"
+SUMMARY="Cygwin package installer"
+#DESCRIPTION=
+HOMEPAGE="https://cygwin.com/"
+
+RESTRICT="debuginfo strip"
+
+src_compile() {
+	cd ${S}
+	ACLOCAL_PATH=/usr/${ARCH}-w64-mingw32/sys-root/mingw/share/aclocal \
+	cygautoreconf
+	cd ${B}
+	CC= CXX= CXXFLAGS="${CXXFLAGS}" \
+	cygconf --build=${CBUILD} --host=${ARCH}-w64-mingw32
+	cygmake VER=${VERSION}
+	cygmake upx
+}
+
+src_install() {
+	cd ${B}
+	newbin setup.exe setup-${VERSION}-${RELEASE}.exe
+	dosym setup-${VERSION}-${RELEASE}.exe /usr/bin/cygsetup
+
+	dodir /etc/postinstall /etc/preremove
+	cat > ${D}/etc/postinstall/setup.sh <<_EOF
+/usr/bin/mkdir -p "\$(/usr/bin/cygpath \$CYGWINFORALL -P)/Cygwin"
+/usr/bin/mkshortcut \$CYGWINFORALL -P -w /var/log \
+  -n "Cygwin/Cygwin${ARCH_x86_64+64} Setup" \
+  -a "--local-package-dir \$(cygpath -w /var/cache/setup)" \
+  /usr/bin/setup-${VERSION}-${RELEASE}.exe
+/usr/bin/mkshortcut \$CYGWINFORALL -P -w /var/log \
+  -n "Cygwin/Update Cygwin${ARCH_x86_64+64}" \
+  -a "--no-shortcuts --package-manager --upgrade-also --local-package-dir \$(cygpath -w /var/cache/setup)" \
+  /usr/bin/setup-${VERSION}-${RELEASE}.exe
+_EOF
+	cat > ${D}/etc/preremove/setup.sh <<_EOF
+/usr/bin/rm -f "\$(cygpath \$CYGWINFORALL -P)/Cygwin/Cygwin${ARCH_x86_64+64} Setup.lnk"
+/usr/bin/rm -f "\$(cygpath \$CYGWINFORALL -P)/Cygwin/Update Cygwin${ARCH_x86_64+64}.lnk"
+/usr/bin/rmdir --ignore-fail-on-non-empty "\$(/usr/bin/cygpath \$CYGWINFORALL -P)/Cygwin"
+_EOF
+}
