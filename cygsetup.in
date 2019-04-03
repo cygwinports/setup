@@ -1,0 +1,111 @@
+#!/bin/bash
+
+set -e;
+set -x;
+
+# Command Line Options:
+# -D --download                     Download from internet
+# -L --local-install                Install from local directory
+# -s --site                         Download site
+# -O --only-site                    Ignore all sites except for -s
+# -R --root                         Root installation directory
+# -x --remove-packages              Specify packages to uninstall
+# -c --remove-categories            Specify categories to uninstall
+# -P --packages                     Specify packages to install
+# -C --categories                   Specify entire categories to install
+# -p --proxy                        HTTP/FTP proxy (host:port)
+# -a --arch                         architecture to install (x86_64 or x86)
+# -q --quiet-mode                   Unattended setup mode
+# -M --package-manager              Semi-attended chooser-only mode
+# -B --no-admin                     Do not check for and enforce running as
+#                                   Administrator
+# -h --help                         print help
+# -l --local-package-dir            Local package directory
+# -r --no-replaceonreboot           Disable replacing in-use files on next
+#                                   reboot.
+# -X --no-verify                    Don't verify setup.ini signatures
+# -n --no-shortcuts                 Disable creation of desktop and start menu
+#                                   shortcuts
+# -N --no-startmenu                 Disable creation of start menu shortcut
+# -d --no-desktop                   Disable creation of desktop shortcut
+# -K --pubkey                       URL of extra public key file (gpg format)
+# -S --sexpr-pubkey                 Extra public key in s-expr format
+# -u --untrusted-keys               Use untrusted keys from last-extrakeys
+# -U --keep-untrusted-keys          Use untrusted keys and retain all
+# -g --upgrade-also                 also upgrade installed packages
+# -o --delete-orphans               remove orphaned packages
+# -f --force-current                select the current version for all packages
+# -Y --prune-install                prune the installation to only the requested packages
+# -A --disable-buggy-antivirus      Disable known or suspected buggy anti virus
+#                                   software packages during execution.
+
+cygsetup ()
+{
+    local arch args exe;
+
+    arch=$(arch)
+
+    while (true) ; do
+	case $1 in
+	# accept some dnf flags
+	-y|--assumeyes)
+		args+=" --quiet-mode" ; shift ;;
+	--downloadonly)
+		args+=" --download" ; shift ;;
+	--nogpgcheck)
+		args+=" --no-verify" ; shift ;;
+	--repofrompath)
+		args+=" --site ${2#*,}"; shift 2 ;;
+	# accept setup flags
+	-K|-S)	args+=" $1 $2"; shift 2 ;;
+	-*)	args+=" $1"; shift ;;
+	*)	break ;;
+	esac
+    done
+
+    case "$args" in
+    *--quiet-mode*) ;;
+    *)	args+=" --package-manager" ;;
+    esac
+
+    case $1 in
+    install)
+	args+=" --packages "; shift;
+	packages="$@" ; args+="${packages// /,}" ;;
+    remove|erase)
+	args+=" --remove-packages "; shift;
+	packages="$@" ; args+="${packages// /,}" ;;
+    group)
+	case $2 in
+	install)
+		args+=" --categories "; shift 2;
+		packages="$@" ; args+="${packages// /,}" ;;
+	remove)
+		args+=" --remove-categories "; shift 2;
+		packages="$@" ; args+="${packages// /,}" ;;
+	*)	echo "ERROR: unknown arguments: $1 $2" >&2 ; exit 1 ;;
+	esac ;;
+    groupinstall)
+	args+=" --categories "; shift;
+	packages="$@" ; args+="${packages// /,}" ;;
+    groupremove)
+	args+=" --remove-categories "; shift;
+	packages="$@" ; args+="${packages// /,}" ;;
+    update)
+	args+=" --upgrade-also"; shift ;;
+    distro-sync)
+	args+=" --force-current --delete-orphans"; shift ;;
+    '') ;;
+    *)
+	echo "ERROR: unknown argument: $1" >&2 ; exit 1 ;;
+    esac
+
+    cygstart -- /bin/setup-@VER@.exe \
+	--arch ${arch/i6/x} \
+	--no-shortcuts \
+	--root $(cygpath -w /) \
+	--local-package-dir $(cygpath -w /var/cache/setup) \
+	$args
+}
+
+cygsetup "$@"
