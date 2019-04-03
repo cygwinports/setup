@@ -3,16 +3,14 @@ GIT_TAG="release_${PV}"
 inherit git
 
 NAME="setup"
-VERSION=2.891
+VERSION=2.897
 RELEASE=0.1
 CATEGORY="Base"
 SUMMARY="Cygwin package installer"
 #DESCRIPTION=
 HOMEPAGE="https://cygwin.com/"
 
-PATCH_URI="https://cygwin.com/git/gitweb.cgi?p=cygwin-apps/setup.git;a=patch;h=da93010#/setup-2.891-lws2_32.patch"
-
-RESTRICT="debuginfo strip"
+SRC_URI+=" cygsetup.in"
 
 src_compile() {
 	cd ${S}
@@ -22,13 +20,13 @@ src_compile() {
 	CC= CXX= CXXFLAGS="${CXXFLAGS}" \
 	cygconf --build=${CBUILD} --host=${ARCH}-w64-mingw32
 	cygmake VER=${VERSION}
-	cygmake upx
 }
 
 src_install() {
 	cd ${B}
 	newbin setup.exe setup-${VERSION}-${RELEASE}.exe
-	dosym setup-${VERSION}-${RELEASE}.exe /usr/bin/cygsetup
+	sed -e "s/@VER@/${VERSION}-${RELEASE}/" ${S}/cygsetup.in > ${D}/usr/bin/cygsetup
+	chmod +x ${D}/usr/bin/cygsetup
 
 	dodir /etc/postinstall /etc/preremove
 	cat > ${D}/etc/postinstall/setup.sh <<_EOF
